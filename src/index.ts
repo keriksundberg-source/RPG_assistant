@@ -70,9 +70,6 @@ const candidate = i.guild!.channels.cache.find(
 // Prefer the named recap channel if available and text-based
 if (candidate && candidate.isTextBased()) {
   await candidate.send(`## 🎲 Session Recap\n${recap}`);
-} else if (i.channel && i.channel.isTextBased()) {
-  // Fallback to the channel where the command was issued
-  await i.channel.send(`## 🎲 Session Recap\n${recap}`);
 } else {
   // Last resort if nothing else is text-based
   await i.followUp(`## 🎲 Session Recap\n${recap}`);
