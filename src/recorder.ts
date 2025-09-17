@@ -1,4 +1,4 @@
-import { joinVoiceChannel, EndBehaviorType, VoiceReceiver, getVoiceConnection } from '@discordjs/voice';
+import { joinVoiceChannel, EndBehaviorType, VoiceReceiver, getVoiceConnection, DiscordGatewayAdapterCreator } from '@discordjs/voice';
 import { ChannelType, Guild, VoiceBasedChannel } from 'discord.js';
 import { createWriteStream, mkdirSync } from 'node:fs';
 import { existsSync } from 'node:fs';
@@ -19,7 +19,7 @@ ensureDir(cfg.recordDir);
 const conn = joinVoiceChannel({
 channelId,
 guildId: guild.id,
-adapterCreator: guild.voiceAdapterCreator,
+adapterCreator: guild.voiceAdapterCreator as unknown as DiscordGatewayAdapterCreator,
 selfDeaf: false,
 selfMute: true
 });
