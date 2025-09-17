@@ -1,4 +1,9 @@
-import { Client, GatewayIntentBits, ChannelType, TextBasedChannel } from 'discord.js';
+import { Client, GatewayIntentBits, ChannelType } from 'discord.js';
+import type { TextBasedChannel } from 'discord.js';
+
+function hasSend(ch: unknown): ch is { send: (content: any) => any } {
+  return !!ch && typeof (ch as any).send === 'function';
+}
 import { cfg } from './config.js';
 import { logger } from './logger.js';
 import { registerCommands } from './commands.js';
