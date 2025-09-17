@@ -1,0 +1,27 @@
+{
+"name": "recap-bot",
+"version": "0.1.0",
+"type": "module",
+"private": true,
+"scripts": {
+"dev": "tsx watch src/index.ts",
+"start": "node dist/index.js",
+"build": "tsc -p .",
+"register:commands": "tsx src/commands.ts"
+},
+"dependencies": {
+"@discordjs/voice": "^0.16.1",
+"discord.js": "^14.16.3",
+"dotenv": "^16.4.5",
+"fluent-ffmpeg": "^2.1.2",
+"libsodium-wrappers": "^0.7.14",
+"openai": "^4.57.0",
+"pino": "^9.5.0",
+"prism-media": "^1.3.5"
+},
+"devDependencies": {
+"@types/node": "^20.11.30",
+"tsx": "^4.19.2",
+"typescript": "^5.6.3"
+}
+}
