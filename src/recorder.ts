@@ -5,9 +5,10 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { logger } from './logger.js';
 import { cfg } from './config.js';
-import * as Prism from 'prism-media';
-// Namespace import så CJS-exporter nås korrekt
-const OpusNS = (Prism as any).opus as any;
+import prism from 'prism-media';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const Wav = require('wav');
 
 export type ActiveRecording = { files: string[]; receiver: VoiceReceiver; startedAt: number };
 
@@ -28,17 +29,15 @@ export async function startRecording(guild: Guild, channelId: string): Promise<A
     const files: string[] = [];
 
     receiver.speaking.on('start', (userId) => {
-        // Pass-through: kapsla Opus → OGG (ingen decoding krävs)
+        // Decode via opusscript → PCM (s16le) → WAV wrapper
         const opus = receiver.subscribe(userId, {
             end: { behavior: EndBehaviorType.AfterSilence, duration: 1500 }
         });
-            const ogg = new OpusNS.OggLogicalBitstream({
-            opusHead: new OpusNS.OpusHead({ channelCount: 1, sampleRate: 48000 }),
-            pageSizeControl: { maxPackets: 10 },
-        });
-        const out = join(cfg.recordDir, `${Date.now()}-${userId}.ogg`);
+        const decoder = new prism.opus.Decoder({ rate: 48000, channels: 1, frameSize: 960 });
+        const wav = new (Wav as any).Writer({ sampleRate: 48000, channels: 1, bitDepth: 16 });
+        const out = join(cfg.recordDir, `${Date.now()}-${userId}.wav`);
         const ws = createWriteStream(out);
-        opus.pipe(ogg).pipe(ws);
+        opus.pipe(decoder).pipe(wav).pipe(ws);
         ws.on('close', () => { files.push(out); logger.debug({ out }, 'chunk closed'); });
     });
 
