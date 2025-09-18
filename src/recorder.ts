@@ -7,50 +7,49 @@ import prism from 'prism-media';
 import { logger } from './logger.js';
 import { cfg } from './config.js';
 
-
 export type ActiveRecording = { files: string[]; receiver: VoiceReceiver; startedAt: number };
-
 
 const ensureDir = (dir: string) => { if (!existsSync(dir)) mkdirSync(dir, { recursive: true }); };
 
-
 export async function startRecording(guild: Guild, channelId: string): Promise<ActiveRecording> {
-ensureDir(cfg.recordDir);
-const conn = joinVoiceChannel({
-channelId,
-guildId: guild.id,
-adapterCreator: guild.voiceAdapterCreator as unknown as DiscordGatewayAdapterCreator,
-selfDeaf: false,
-selfMute: true
-});
+    ensureDir(cfg.recordDir);
+    const conn = joinVoiceChannel({
+        channelId,
+        guildId: guild.id,
+        adapterCreator: guild.voiceAdapterCreator as unknown as DiscordGatewayAdapterCreator,
+        selfDeaf: false,
+        selfMute: true
+    });
 
+    const receiver = conn.receiver;
+    const files: string[] = [];
 
-const receiver = conn.receiver;
-const files: string[] = [];
+    receiver.speaking.on('start', (userId) => {
+        // Pass-through: kapsla Opus → OGG (ingen decoding krävs)
+        const opus = receiver.subscribe(userId, {
+            end: { behavior: EndBehaviorType.AfterSilence, duration: 1500 }
+        });
+        const ogg = new prism.opus.OggLogicalBitstream({
+            opusHead: new prism.opus.OpusHead({ channelCount: 1, sampleRate: 48000 }),
+            pageSizeControl: { maxPackets: 10 },
+        });
+        const out = join(cfg.recordDir, `${Date.now()}-${userId}.ogg`);
+        const ws = createWriteStream(out);
+        opus.pipe(ogg).pipe(ws);
+        ws.on('close', () => { files.push(out); logger.debug({ out }, 'chunk closed'); });
+    });
 
-
-receiver.speaking.on('start', (userId) => {
-// Subscribe to a user's Opus stream and decode to PCM 48kHz mono
-const opus = receiver.subscribe(userId, { end: { behavior: EndBehaviorType.AfterSilence, duration: 1500 } });
-const pcm = new prism.opus.Decoder({ rate: 48000, channels: 1, frameSize: 960 });
-const out = join(cfg.recordDir, `${Date.now()}-${userId}.pcm`);
-const ws = createWriteStream(out);
-opus.pipe(pcm).pipe(ws);
-ws.on('close', () => { files.push(out); logger.debug({ out }, 'chunk closed'); });
-});
-
-
-return { files, receiver, startedAt: Date.now() };
+    return { files, receiver, startedAt: Date.now() };
 }
-
 
 export function stopRecording(guildId: string) {
-const conn = getVoiceConnection(guildId);
-conn?.destroy();
+    const conn = getVoiceConnection(guildId);
+    conn?.destroy();
 }
 
-
 export function getUserVoiceChannelId(guild: Guild, userId: string): string | null {
-const ch = guild.channels.cache.find(c => c.type === ChannelType.GuildVoice && c.members.has(userId)) as VoiceBasedChannel | undefined;
-return ch?.id || null;
+    const ch = guild.channels.cache.find(
+        c => c.type === ChannelType.GuildVoice && c.members.has(userId)
+    ) as VoiceBasedChannel | undefined;
+    return ch?.id || null;
 }
