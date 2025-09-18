@@ -9,6 +9,7 @@ import { cfg } from './config.js';
 
 export type ActiveRecording = { files: string[]; receiver: VoiceReceiver; startedAt: number };
 
+const OpusAny = (prism as any).opus as any;
 const ensureDir = (dir: string) => { if (!existsSync(dir)) mkdirSync(dir, { recursive: true }); };
 
 export async function startRecording(guild: Guild, channelId: string): Promise<ActiveRecording> {
@@ -29,8 +30,8 @@ export async function startRecording(guild: Guild, channelId: string): Promise<A
         const opus = receiver.subscribe(userId, {
             end: { behavior: EndBehaviorType.AfterSilence, duration: 1500 }
         });
-        const ogg = new prism.opus.OggLogicalBitstream({
-            opusHead: new prism.opus.OpusHead({ channelCount: 1, sampleRate: 48000 }),
+        const ogg = new OpusAny.OggLogicalBitstream({
+            opusHead: new OpusAny.OpusHead({ channelCount: 1, sampleRate: 48000 }),
             pageSizeControl: { maxPackets: 10 },
         });
         const out = join(cfg.recordDir, `${Date.now()}-${userId}.ogg`);
