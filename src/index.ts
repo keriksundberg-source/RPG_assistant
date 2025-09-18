@@ -1,4 +1,8 @@
-import { Client, GatewayIntentBits, ChannelType } from 'discord.js';
+import { Client, GatewayIntentBits, ChannelType, TextChannel } from 'discord.js';
+// Type guard for TextChannel
+function isTextChannel(ch: any): ch is TextChannel {
+  return ch && ch.type === ChannelType.GuildText;
+}
 import type { TextBasedChannel } from 'discord.js';
 
 function hasSend(ch: unknown): ch is { send: (content: any) => any } {
@@ -13,6 +17,8 @@ import { summarizeForWFRP, transcribe } from './summarize.js';
 import { PRIVACY_TEXT } from './privacy.js';
 import { mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { postRecapSmart } from './util/postRecap';
 
 
 const client = new Client({ 
@@ -61,20 +67,34 @@ client.on('interactionCreate', async (i) => {
       const text = await transcribe(out);
       const recap = await summarizeForWFRP(text);
 
-      const candidate = i.guild!.channels.cache.find(
-        c => c.type === ChannelType.GuildText && c.name === cfg.recapChannelName
-      );
-
-      // Prefer the named recap channel if available and text-based
-      if (candidate && candidate.isTextBased()) {
-        await candidate.send(`## 🎲 Session Recap\n${recap}`);
+      let target: TextChannel | null = null;
+      if (i.guild) {
+        const candidate = i.guild.channels.cache.find(
+          c => c.type === ChannelType.GuildText && c.name === cfg.recapChannelName
+        );
+        target = isTextChannel(candidate)
+          ? candidate
+          : (isTextChannel(i.channel) ? i.channel : null);
       } else {
-        // Last resort if nothing else is text-based
-        await i.followUp(`## 🎲 Session Recap\n${recap}`);
+        target = isTextChannel(i.channel) ? i.channel : null;
+      }
+
+      if (target) {
+        // 🔹 Använd helpern – den chunkar, använder embeds eller bifogar fil vid behov
+        await postRecapSmart(target, '🎲 Session Recap', recap);
+      } else {
+        // 🔻 Sista utvägen: skicka som fil via followUp om vi inte hittar en textkanal
+        const name = `recap-${new Date().toISOString().slice(0,19).replace(/[ :T]/g,'-')}.md`;
+        await i.followUp({
+          content: '**🎲 Session Recap** — full text attached.',
+          files: [{ attachment: Buffer.from(`# 🎲 Session Recap\n\n${recap}`, 'utf8'), name }],
+          allowedMentions: { parse: [] },
+        });
       }
 
       await cleanup([out, ...active.files]);
       active = null;
+
     } catch (err) {
       active = null;
       logger.error(err, 'Post-processing failed');
