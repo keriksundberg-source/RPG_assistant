@@ -18,7 +18,7 @@ import { PRIVACY_TEXT } from './privacy.js';
 import { mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { postRecapSmart } from './util/postRecap';
+import { postRecapSmart } from './util/postRecap.js';
 
 
 const client = new Client({ 
