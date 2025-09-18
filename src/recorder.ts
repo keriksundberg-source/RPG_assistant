@@ -3,13 +3,15 @@ import { ChannelType, Guild, VoiceBasedChannel } from 'discord.js';
 import { createWriteStream, mkdirSync } from 'node:fs';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import prism from 'prism-media';
 import { logger } from './logger.js';
 import { cfg } from './config.js';
+import * as Prism from 'prism-media';
+// Namespace import så CJS-exporter nås korrekt
+const OpusNS = (Prism as any).opus as any;
 
 export type ActiveRecording = { files: string[]; receiver: VoiceReceiver; startedAt: number };
 
-const OpusAny = (prism as any).opus as any;
+
 const ensureDir = (dir: string) => { if (!existsSync(dir)) mkdirSync(dir, { recursive: true }); };
 
 export async function startRecording(guild: Guild, channelId: string): Promise<ActiveRecording> {
@@ -30,8 +32,8 @@ export async function startRecording(guild: Guild, channelId: string): Promise<A
         const opus = receiver.subscribe(userId, {
             end: { behavior: EndBehaviorType.AfterSilence, duration: 1500 }
         });
-        const ogg = new OpusAny.OggLogicalBitstream({
-            opusHead: new OpusAny.OpusHead({ channelCount: 1, sampleRate: 48000 }),
+            const ogg = new OpusNS.OggLogicalBitstream({
+            opusHead: new OpusNS.OpusHead({ channelCount: 1, sampleRate: 48000 }),
             pageSizeControl: { maxPackets: 10 },
         });
         const out = join(cfg.recordDir, `${Date.now()}-${userId}.ogg`);
