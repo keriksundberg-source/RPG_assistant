@@ -1,4 +1,4 @@
-import { TextChannel, ChannelType } from 'discord.js';
+import { TextChannel, Channel, ChannelType } from 'discord.js';
 
 export async function getRecapChannel(client: any): Promise<TextChannel | null> {
   const key = process.env.RECAP_CHANNEL_ID || 'recap';
@@ -11,7 +11,7 @@ export async function getRecapChannel(client: any): Promise<TextChannel | null> 
 
   // 2) Leta på alla guilds efter kanal med detta **namn**
   for (const [, guild] of client.guilds.cache) {
-    const ch = guild.channels.cache.find(c => c.type === ChannelType.GuildText && c.name === key);
+    const ch = guild.channels.cache.find((c: Channel) => c.type === ChannelType.GuildText && c.name === key);
     if (ch) return ch as TextChannel;
   }
   return null;
